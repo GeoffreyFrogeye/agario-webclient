@@ -132,8 +132,7 @@ Viewer.prototype = {
         this.client.on('ballAppear', function (id) {
             if (!_this.balls[id]) {
                 _this.balls[id] = new BallView(_this, this.balls[id]);
-            } else {
-            }
+            } else {}
         });
         // this.client.on('ballDestroy', function(id) {
         //     delete this.balls[id];
@@ -234,10 +233,16 @@ Pointer.prototype = {
     },
     pointermove: function (e) {
         var gamePos = e.data.getLocalPosition(this.viewer.stage);
-        this.dest = { // TODO deadzone
+        this.dest = {
             x: gamePos.x - this.viewer.cam.x.get(),
             y: gamePos.y - this.viewer.cam.y.get()
         };
+        if (Math.abs(this.dest.x) < 10 && Math.abs(this.dest.x) < 10) {
+            this.dest = {
+                x: 0,
+                y: 0
+            };
+        }
         this.move();
     }
 };
@@ -249,7 +254,7 @@ function Controller(client) {
         region: 'EU-London',
         ip: '127.0.0.1',
         port: 9158
-    }
+    };
     this.nick = 'agario-client';
     this.autoRespawn = false;
 
