@@ -1,0 +1,9 @@
+body,
+#viewer,
+canvas {
+    margin: 0;
+}
+
+body {
+    overflow: hidden;
+}
