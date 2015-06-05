@@ -8,6 +8,7 @@ A small browser-based graphical client for agar.io, written using [pixijs](http:
 ##Usage
 
 * Clone the repo with the `--recursive` option. If it was cloned without this option, run `git submodule update --init --recursive`
-* Install [browserify](http://browserify.org/) globally
+* Install [browserify](http://browserify.org/) globally `npm install -g browserify`
+* Install [ws](http://einaros.github.io/ws/) locally `npm install w`
 * Run `make`
 * Open `app.html` from the browser
