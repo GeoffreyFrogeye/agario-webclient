@@ -273,6 +273,10 @@ function Controller(client) {
     this.cellgui.add(this, 'nick');
     this.cellgui.add(this, 'spawn');
     this.cellgui.add(this, 'autoRespawn');
+    var scoreGui = this.cellgui.add(this.client, 'score').listen();
+    this.client.on('scoreUpdate', function() {
+        scoreGui.updateDisplay();
+    });
 
     this.leadergui = this.gui.addFolder('Leaderboard');
     this.leaders = {};
