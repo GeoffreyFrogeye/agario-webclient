@@ -43,7 +43,7 @@ AnimatedValue.prototype = {
     }
 };
 
-PIXI.Graphics.prototype.bringToFront = function () {
+PIXI.Container.prototype.bringToFront = function () {
     if (this.parent) {
         var parent = this.parent;
         parent.removeChild(this);
@@ -54,7 +54,9 @@ PIXI.Graphics.prototype.bringToFront = function () {
 function BallView(main, ball) {
     this.main = main;
     this.ball = ball;
+    this.container = new PIXI.Container();
     this.graphic = new PIXI.Graphics();
+    this.container.addChild(this.graphic);
 
     this.x = new AnimatedValue(0);
     this.y = new AnimatedValue(0);
@@ -69,7 +71,6 @@ function BallView(main, ball) {
         if (reason.reason == 'eaten') {
             var eater = _this.main.balls[reason.by];
             if (eater && eater.ball.id != _this.ball.id) {
-                // eater.graphic.bringToFront();
                 _this.x.follow(function () {
                     return eater.x.get();
                 }, 100);
@@ -105,14 +106,16 @@ BallView.prototype = {
         this.y.write(this.ball.y);
         this.s.set(this.ball.size, 100);
         this.shape();
+        this.setName();
+        this.setMass();
         this.main.zSort(this.ball.size);
-        this.main.stage.addChild(this.graphic);
+        this.main.stage.addChild(this.container);
     },
     disappear: function () {
-        var _this = this;
         this.s.set(0, 100);
+        var _this = this;
         setTimeout(function () {
-            _this.main.stage.removeChild(_this.graphic);
+            _this.main.stage.removeChild(_this.container);
         }, 100);
     },
     shape: function () {
@@ -121,10 +124,71 @@ BallView.prototype = {
         this.graphic.drawCircle(0, 0, 1);
         this.graphic.endFill();
     },
+    setName: function () {
+        if (this.ball.name) {
+            if (!this.name) {
+                this.name = new PIXI.Text(this.ball.name, {
+                    font: 'bold 20pt Arial',
+                    fill: 0xFFFFFF,
+                    stroke: 0x000000,
+                    strokeThickness: 5
+                });
+                var _this = this;
+                this.ball.on('rename', function () {
+                    _this.updateName();
+                });
+            }
+            this.updateName();
+            this.container.addChild(this.name);
+        } else {
+            if (this.name) {
+                this.container.removeChild(this.text);
+                this.ball.removeAllListener('rename');
+                delete this.text;
+            }
+        }
+    },
+    updateName: function () {
+        this.name.resolution = 10;
+        this.name.scale.x = this.name.scale.y *= 2 * 0.9 / this.name.width;
+        this.name.position.x = -this.name.width / 2;
+        this.name.position.y = -this.name.height / 2;
+    },
+    setMass: function () {
+        if (this.ball.mine) {
+            if (!this.mass) {
+                this.mass = new PIXI.Text(this.ball.size, {
+                    font: 'bold 20pt Arial',
+                    fill: 0xFFFFFF,
+                    stroke: 0x000000,
+                    strokeThickness: 5
+                });
+                var _this = this;
+                this.ball.on('resize', function () {
+                    _this.updateMass();
+                });
+            }
+            this.updateMass();
+            this.container.addChild(this.mass);
+        } else {
+            if (this.mass) {
+                this.container.removeChild(this.mass);
+                this.ball.removeAllListeners('rename');
+                delete this.mass;
+            }
+        }
+    },
+    updateMass: function () {
+        this.mass.text = this.ball.size;
+        this.mass.resolution = 10;
+        this.mass.scale.x = this.mass.scale.y *= 0.5 / this.mass.width;
+        this.mass.position.x = -this.mass.width / 2;
+        this.mass.position.y = this.name ? this.name.height / 2 : 0;
+    },
     render: function () {
-        this.graphic.position.x = this.x.get();
-        this.graphic.position.y = this.y.get();
-        this.graphic.scale.x = this.graphic.scale.y = this.s.get();
+        this.container.position.x = this.x.get();
+        this.container.position.y = this.y.get();
+        this.container.scale.x = this.container.scale.y = this.s.get();
     }
 };
 
@@ -213,7 +277,7 @@ Viewer.prototype = {
         for (var key_offset in keys) {
             var ball = this.balls[keys[key_offset]];
             if (ball.ball.size >= at) {
-                ball.graphic.bringToFront();
+                ball.container.bringToFront();
             }
         }
     },
