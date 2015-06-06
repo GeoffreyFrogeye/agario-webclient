@@ -4,27 +4,50 @@ function AnimatedValue(value) {
 
 AnimatedValue.prototype = {
     get: function () {
-        var now = performance.now(),
-            end = this.frTime + this.timeout;
-        if (now >= end) {
-            return this.toVal;
+        if (this.timeout) {
+            var now = performance.now(),
+                end = this.frTime + this.timeout;
+            if (now >= end) {
+                this.timeout = 0;
+                return this.toVal;
+            } else {
+                if (this.following) {
+                    this.toVal = this.following();
+                }
+                return this.toVal - (this.toVal - this.frVal) * (end - now) / this.timeout;
+            }
         } else {
-            return this.toVal - (this.toVal - this.frVal) * (end - now) / this.timeout;
+            return this.toVal;
         }
     },
     set: function (value, timeout) {
         if (value != this.toVal) {
-            this.timeout = timeout;
             this.frVal = this.get();
             this.toVal = value;
+            this.timeout = timeout;
+            this.following = undefined;
             this.frTime = performance.now();
         }
+    },
+    follow: function (following, timeout) {
+        this.frVal = this.get();
+        this.following = following;
+        this.timeout = timeout;
+        this.frTime = performance.now();
     },
     write: function (value) {
         this.frVal = value;
         this.toVal = value;
         this.timeout = 0;
         this.frTime = performance.now(); // so end == now
+    }
+};
+
+PIXI.Graphics.prototype.bringToFront = function () {
+    if (this.parent) {
+        var parent = this.parent;
+        parent.removeChild(this);
+        parent.addChild(this);
     }
 };
 
@@ -42,18 +65,37 @@ function BallView(main, ball) {
     this.ball.on('appear', function () {
         _this.appear();
     });
-    this.ball.on('destroy', function () {
-        _this.main.stage.removeChild(_this.graphic);
+    this.ball.on('destroy', function (reason) {
+        if (reason.reason == 'eaten') {
+            var eater = _this.main.balls[reason.by];
+            if (eater && eater.ball.id != _this.ball.id) {
+                // eater.graphic.bringToFront();
+                _this.x.follow(function () {
+                    return eater.x.get();
+                }, 100);
+                _this.y.follow(function () {
+                    return eater.y.get();
+                }, 100);
+                setTimeout(function () {
+                    _this.disappear();
+                }, 50);
+            } else {
+                _this.disappear();
+            }
+        } else {
+            _this.disappear();
+        }
     });
     this.ball.on('disappear', function () {
-        _this.main.stage.removeChild(_this.graphic);
+        _this.disappear();
     });
-    this.ball.on('move', function () {
-        _this.x.set(_this.ball.x, 100);
-        _this.y.set(_this.ball.y, 100);
+    this.ball.on('move', function (old_x, old_y, new_x, new_y) {
+        _this.x.set(new_x, 100);
+        _this.y.set(new_y, 100);
     });
-    this.ball.on('resize', function () {
-        _this.s.set(_this.ball.size, 100);
+    this.ball.on('resize', function (old_size, new_size) {
+        _this.s.set(new_size, 100);
+        _this.main.zSort(new_size);
     });
 }
 
@@ -61,14 +103,21 @@ BallView.prototype = {
     appear: function () {
         this.x.write(this.ball.x);
         this.y.write(this.ball.y);
-        this.s.write(this.ball.size);
+        this.s.set(this.ball.size, 100);
         this.shape();
+        this.main.zSort(this.ball.size);
         this.main.stage.addChild(this.graphic);
+    },
+    disappear: function () {
+        var _this = this;
+        this.s.set(0, 100);
+        setTimeout(function () {
+            _this.main.stage.removeChild(_this.graphic);
+        }, 100);
     },
     shape: function () {
         this.graphic.clear();
-        this.graphic.beginFill(this.ball.color.replace('#', '0x'),
-            this.ball.virus ? 0.5 : 0.9);
+        this.graphic.beginFill(this.ball.virus ? 0x005500 : this.ball.color.replace('#', '0x'), 1);
         this.graphic.drawCircle(0, 0, 1);
         this.graphic.endFill();
     },
@@ -134,9 +183,9 @@ Viewer.prototype = {
                 _this.balls[id] = new BallView(_this, this.balls[id]);
             } else {}
         });
-        // this.client.on('ballDestroy', function(id) {
-        //     delete this.balls[id];
-        // });
+        this.client.on('ballDestroy', function (id) {
+            delete this.balls[id];
+        });
     },
     addBorders: function () {
         this.borders = new PIXI.Graphics();
@@ -151,6 +200,22 @@ Viewer.prototype = {
         this.stats.domElement.style.left = '0px';
         this.stats.domElement.style.top = '0px';
         document.body.appendChild(this.stats.domElement);
+    },
+    zSort: function (at) {
+        if (!at) {
+            at = 0;
+        }
+        var keys = Object.keys(this.balls);
+        var _this = this;
+        keys.sort(function (a, b) {
+            return _this.balls[a].ball.size - _this.balls[b].ball.size;
+        });
+        for (var key_offset in keys) {
+            var ball = this.balls[keys[key_offset]];
+            if (ball.ball.size >= at) {
+                ball.graphic.bringToFront();
+            }
+        }
     },
     posCamera: function () {
         var x = y = p = 0;
@@ -237,7 +302,7 @@ Pointer.prototype = {
             x: gamePos.x - this.viewer.cam.x.get(),
             y: gamePos.y - this.viewer.cam.y.get()
         };
-        if (Math.abs(this.dest.x) < 10 && Math.abs(this.dest.x) < 10) {
+        if (Math.abs(this.dest.x) < 10 && Math.abs(this.dest.y) < 10) {
             this.dest = {
                 x: 0,
                 y: 0
@@ -274,7 +339,7 @@ function Controller(client) {
     this.cellgui.add(this, 'spawn');
     this.cellgui.add(this, 'autoRespawn');
     var scoreGui = this.cellgui.add(this.client, 'score').listen();
-    this.client.on('scoreUpdate', function() {
+    this.client.on('scoreUpdate', function () {
         scoreGui.updateDisplay();
     });
 
