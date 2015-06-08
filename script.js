@@ -209,6 +209,10 @@ function Viewer(client, container) {
         _this.addListners();
         _this.addBorders();
         _this.animate();
+        _this.homeview = true;
+        client.once('myNewBall', function() {
+            _this.homeview = false;
+        });
         _this.emit('launched');
     });
     window.addEventListener('resize', function () {
@@ -232,13 +236,19 @@ Viewer.prototype = {
         this.getSize();
         this.renderer.resize(this.width, this.height);
     },
+    defaultScale: function () {
+        return Math.max(this.width / 1920, this.height / 1080)
+    },
     initStage: function () {
         this.stage = new PIXI.Container();
         this.cam = {
             x: new AnimatedValue(this.gameWidth / 2),
             y: new AnimatedValue(this.gameHeight / 2),
-            s: new AnimatedValue(0.5)
+            s: new AnimatedValue(this.defaultScale())
         };
+        this.d = {};
+        this.dg = new PIXI.Graphics();
+        this.stage.addChild(this.dg);
     },
     addListners: function () {
         var _this = this;
@@ -293,8 +303,9 @@ Viewer.prototype = {
         if (p > 0) { // if we have visible ball(s)
             this.cam.x.set(x / p, 100);
             this.cam.y.set(y / p, 100);
-            this.cam.s.set(0.04 * this.width / p, 500); // Scale
-            // TODO Better scale calculation
+            this.cam.s.set(Math.pow(Math.min(64 / p, 1), 0.4) * this.defaultScale(), 500);
+        } else if (this.homeview) {
+            this.cam.s.write(this.defaultScale());
         } // else: don't move the camera
     },
     render: function () {
