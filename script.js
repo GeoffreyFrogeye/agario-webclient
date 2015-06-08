@@ -1,3 +1,6 @@
+window.Client = require('agario-client');
+window.EventEmitter = require('events').EventEmitter;
+
 function AnimatedValue(value) {
     this.write(value);
 }
