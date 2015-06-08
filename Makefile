@@ -1,2 +1,2 @@
-bundle.js: loader.js client/agario-client.js
-		browserify $< -o $@ -i buffer-dataview
+bundle.js: loader.js
+		browserify $< -o $@
