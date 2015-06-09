@@ -8,7 +8,7 @@ A small browser-based graphical client for agar.io, written using [pixijs](http:
 ##Usage
 
 * Clone the repo.
-* Install [browserify](http://browserify.org/) globally `npm install -g browserify`
-* Install [agario-client](https://github.com/pulviscriptor/agario-client) locally `npm install agario-client`
-* Run `make`
+* Install [gulp](http://gulpjs.com/) globally `npm install -g gulp`
+* Install required dependencies `npm install` 
+* Run `gulp`
 * Open `app.html` from the browser
