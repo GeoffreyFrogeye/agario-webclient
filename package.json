@@ -32,6 +32,7 @@
     "pixijs"
   ],
   "author": "GeoffreyFrogeye",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/GeoffreyFrogeye/agario-webclient/issues"
   },
