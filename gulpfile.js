@@ -6,6 +6,7 @@ var gutil = require('gulp-util');
 var uglify = require('gulp-uglify');
 var sourcemaps = require('gulp-sourcemaps');
 var reactify = require('reactify');
+var bower = require('gulp-bower');
 
 gulp.task('javascript', function () {
   // set up the browserify instance on a task basis
@@ -13,7 +14,7 @@ gulp.task('javascript', function () {
     entries: './script.js',
     debug: true,
     // defining transforms here will avoid crashing your stream
-    // transform: [reactify]
+    transform: [reactify]
   });
 
   return b.bundle()
@@ -27,4 +28,10 @@ gulp.task('javascript', function () {
     .pipe(gulp.dest('./'));
 });
 
-gulp.task('default', ['javascript']);
+
+gulp.task('bower', function() {
+  return bower()
+    .pipe(gulp.dest('libs/'));
+});
+
+gulp.task('default', ['javascript', 'bower']);
